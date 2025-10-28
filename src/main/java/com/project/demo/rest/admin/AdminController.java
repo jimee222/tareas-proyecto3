@@ -31,7 +31,7 @@ public class AdminController {
     @PostMapping
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public User createAdministrator(@RequestBody User newAdminUser) {
-        Optional<Role> optionalRole = roleRepository.findByName(RoleEnum.SUPER_ADMIN_ROLE);
+        Optional<Role> optionalRole = roleRepository.findByName(RoleEnum.USER);
 
         if (optionalRole.isEmpty()) {
             return null;

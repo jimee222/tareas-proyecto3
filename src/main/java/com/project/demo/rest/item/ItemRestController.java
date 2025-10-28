@@ -26,7 +26,7 @@ public class ItemRestController {
 
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'USER')")
     public ResponseEntity<?> getAll(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -44,7 +44,7 @@ public class ItemRestController {
                 ordersPage.getContent(), HttpStatus.OK, meta);
     }
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'SUPER_ADMIN')")
     public Item updateItem(@PathVariable Long id, @RequestBody Item item) {
         return itemRepository.findById(id)
                 .map(existingItem -> {
@@ -86,7 +86,7 @@ public class ItemRestController {
     }
 
     @DeleteMapping("/{itemId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'SUPER_ADMIN')")
     public ResponseEntity<?> deleteItem(@PathVariable Long itemId, HttpServletRequest request) {
         Optional<Item> foundItem = itemRepository.findById(itemId);
         if(foundItem.isPresent()) {

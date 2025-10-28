@@ -1,8 +1,7 @@
-package com.project.demo.logic.entity.producto;
+package com.project.demo.logic.entity.gift;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.project.demo.logic.entity.category.Category;
+import com.project.demo.logic.entity.giftList.GiftList;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -10,18 +9,21 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.util.Date;
 
-@Table(name = "producto")
+@Table(name = "gift")
 @Entity
-public class Producto {
+public class Gift {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private  Long id;
+    private Long id;
 
     @Column(nullable = false)
     private String name;
+
     private String description;
+
     private BigDecimal price;
-    private int stock;
+
+    private String imageUrl;
 
     @CreationTimestamp
     @Column(updatable = false, name = "created_at")
@@ -32,14 +34,15 @@ public class Producto {
     private Date updatedAt;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "category_id", referencedColumnName = "id",  nullable = false)
-    @JsonIgnoreProperties("productos")
-    private Category category;
+    @JoinColumn(name = "gift_list_id", referencedColumnName = "id", nullable = false)
+    @JsonIgnoreProperties("gifts")
+    private GiftList giftList;
 
-    public Producto() {
+    // Constructors
+    public Gift() {
     }
 
-
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -72,35 +75,20 @@ public class Producto {
         this.price = price;
     }
 
-    public int getStock() {
-        return stock;
+    public String getImageUrl() {
+        return imageUrl;
     }
 
-    public void setStock(int stock) {
-        this.stock = stock;
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
+
+    public GiftList getGiftList() {
+        return giftList;
     }
 
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Date updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public Category getCategory() {
-        return category;
-    }
-
-    public void setCategory(Category category) {
-        this.category = category;
+    public void setGiftList(GiftList giftList) {
+        this.giftList = giftList;
     }
 }

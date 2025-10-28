@@ -29,101 +29,127 @@ public class ProductoRestController {
     private CategoryRepository categoryRepository;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER','SUPER_ADMIN_ROLE')")
+    @PreAuthorize("hasAnyRole('USER','SUPER_ADMIN')")
     public ResponseEntity<?> getAll(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             HttpServletRequest request) {
 
         Pageable pageable = PageRequest.of(page - 1, size);
-        Page<Producto> pageData = productoRepository.findAll(pageable);
+        Page<Producto> productosPage = productoRepository.findAll(pageable);
 
         Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());
-        meta.setTotalPages(pageData.getTotalPages());
-        meta.setTotalElements(pageData.getTotalElements());
-        meta.setPageNumber(pageData.getNumber() + 1);
-        meta.setPageSize(pageData.getSize());
+        meta.setTotalPages(productosPage.getTotalPages());
+        meta.setTotalElements(productosPage.getTotalElements());
+        meta.setPageNumber(productosPage.getNumber() + 1);
+        meta.setPageSize(productosPage.getSize());
 
-        return new GlobalResponseHandler()
-                .handleResponse("Productos recuperados correctamente", pageData.getContent(), HttpStatus.OK, meta);
+        return new GlobalResponseHandler().handleResponse("Productos recuperados correctamente",
+                productosPage.getContent(), HttpStatus.OK, meta);
+    }
+
+    @GetMapping("/category/{categoryId}")
+    @PreAuthorize("hasAnyRole('USER','SUPER_ADMIN')")
+    public ResponseEntity<?> getProductosByCategoryId(
+            @PathVariable Long categoryId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest request) {
+
+        Pageable pageable = PageRequest.of(page-1, size);
+        Page<Producto> productosPage = productoRepository.findByCategoryId(categoryId, pageable);
+
+        Meta meta = new Meta(request.getMethod(), request.getRequestURL().toString());
+        meta.setTotalPages(productosPage.getTotalPages());
+        meta.setTotalElements(productosPage.getTotalElements());
+        meta.setPageNumber(productosPage.getNumber() + 1);
+        meta.setPageSize(productosPage.getSize());
+
+        return new GlobalResponseHandler().handleResponse("Productos retrieved successfully",
+                productosPage.getContent(), HttpStatus.OK, meta);
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','SUPER_ADMIN_ROLE')")
-    public ResponseEntity<?> getOne(@PathVariable Long id, HttpServletRequest request) {
-        Optional<Producto> found = productoRepository.findById(id);
-        if (found.isEmpty()) {
-            return new GlobalResponseHandler()
-                    .handleResponse("Producto id " + id + " no encontrado", HttpStatus.NOT_FOUND, request);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getProductoById(@PathVariable Long id, HttpServletRequest request) {
+        Optional<Producto> foundProducto = productoRepository.findById(id);
+        if(foundProducto.isPresent()) {
+            return new GlobalResponseHandler().handleResponse("Producto retrieved successfully",
+                    foundProducto.get(), HttpStatus.OK, request);
+        } else {
+            return new GlobalResponseHandler().handleResponse("Producto " + id + " not found",
+                    HttpStatus.NOT_FOUND, request);
         }
-        return new GlobalResponseHandler().handleResponse("OK", found.get(), HttpStatus.OK, request);
     }
 
-    @PostMapping("/producto")
-    @PreAuthorize("hasRole('SUPER_ADMIN_ROLE')")
-    public ResponseEntity<?> create(@RequestBody Producto p, HttpServletRequest request) {
-        // Validaciones mínimas
-        if (p.getName() == null || p.getName().trim().isEmpty()) {
-            return new GlobalResponseHandler().handleResponse("El nombre es obligatorio", null, HttpStatus.BAD_REQUEST, request);
-        }
-        if (p.getPrice() == null || p.getPrice() <= 0) {
-            return new GlobalResponseHandler().handleResponse("El precio debe ser > 0", null, HttpStatus.BAD_REQUEST, request);
-        }
-        if (p.getStock() < 0) {
-            return new GlobalResponseHandler().handleResponse("La cantidad en stock debe ser ≥ 0", null, HttpStatus.BAD_REQUEST, request);
-        }
-        if (p.getCategory() == null || p.getCategory().getId() == null) {
-            return new GlobalResponseHandler().handleResponse("La categoría es obligatoria", null, HttpStatus.BAD_REQUEST, request);
-        }
 
-        Category cat = categoryRepository.findById(p.getCategory().getId()).orElse(null);
-        if (cat == null) {
-            return new GlobalResponseHandler().handleResponse("La categoría indicada no existe", null, HttpStatus.BAD_REQUEST, request);
+    @PostMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+   // @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> addProducto(@RequestBody Producto producto, HttpServletRequest request) {
+        if (producto.getCategory() != null && producto.getCategory().getId() != null) {
+            Optional<Category> category = categoryRepository.findById(producto.getCategory().getId());
+            if (category.isPresent()) {
+                producto.setCategory(category.get());
+                Producto savedProducto = productoRepository.save(producto);
+                return new GlobalResponseHandler().handleResponse("Producto created successfully",
+                        savedProducto, HttpStatus.CREATED, request);
+            } else {
+                return new GlobalResponseHandler().handleResponse("Category not found",
+                        HttpStatus.BAD_REQUEST, request);
+            }
+        } else {
+            return new GlobalResponseHandler().handleResponse("Category is required",
+                    HttpStatus.BAD_REQUEST, request);
         }
-        p.setCategory(cat);
-
-        Producto saved = productoRepository.save(p);
-        return new GlobalResponseHandler().handleResponse("Producto creado correctamente", saved, HttpStatus.CREATED, request);
     }
+
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN_ROLE')")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Producto p, HttpServletRequest request) {
-        Optional<Producto> existing = productoRepository.findById(id);
-        if (existing.isEmpty()) {
-            return new GlobalResponseHandler().handleResponse("Producto id " + id + " no encontrado", null, HttpStatus.NOT_FOUND, request);
-        }
-        Producto e = existing.get();
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+   // @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> updateProducto(@PathVariable Long id, @RequestBody Producto producto, HttpServletRequest request) {
+        Optional<Producto> existingProducto = productoRepository.findById(id);
+        if (existingProducto.isPresent()) {
+            Producto productoToUpdate = existingProducto.get();
+            productoToUpdate.setName(producto.getName());
+            productoToUpdate.setDescription(producto.getDescription());
+            productoToUpdate.setPrice(producto.getPrice());
+            productoToUpdate.setStock(producto.getStock());
 
-        if (p.getName() != null && !p.getName().trim().isEmpty()) e.setName(p.getName());
-        if (p.getDescription() != null) e.setDescription(p.getDescription());
-        if (p.getPrice() != null) {
-            if (p.getPrice() <= 0) {
-                return new GlobalResponseHandler().handleResponse("El precio debe ser > 0", null, HttpStatus.BAD_REQUEST, request);
+            if (producto.getCategory() != null && producto.getCategory().getId() != null) {
+                Optional<Category> category = categoryRepository.findById(producto.getCategory().getId());
+                if (category.isPresent()) {
+                    productoToUpdate.setCategory(category.get());
+                } else {
+                    return new GlobalResponseHandler().handleResponse("Category not found",
+                            HttpStatus.BAD_REQUEST, request);
+                }
             }
-            e.setPrice(p.getPrice());
-        }
-        if (p.getStock() >= 0) e.setStock(p.getStock());
 
-        if (p.getCategory() != null && p.getCategory().getId() != null) {
-            Category cat = categoryRepository.findById(p.getCategory().getId()).orElse(null);
-            if (cat == null) {
-                return new GlobalResponseHandler().handleResponse("La categoría indicada no existe", null, HttpStatus.BAD_REQUEST, request);
-            }
-            e.setCategory(cat);
+            Producto savedProducto = productoRepository.save(productoToUpdate);
+            return new GlobalResponseHandler().handleResponse("Producto updated successfully",
+                    savedProducto, HttpStatus.OK, request);
+        } else {
+            return new GlobalResponseHandler().handleResponse("Producto " + id + " not found",
+                    HttpStatus.NOT_FOUND, request);
         }
-
-        Producto saved = productoRepository.save(e);
-        return new GlobalResponseHandler().handleResponse("Producto actualizado correctamente", saved, HttpStatus.OK, request);
     }
+
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN_ROLE')")
-    public ResponseEntity<?> delete(@PathVariable Long id, HttpServletRequest request) {
-        if (!productoRepository.existsById(id)) {
-            return new GlobalResponseHandler().handleResponse("Producto id " + id + " no encontrado", null, HttpStatus.NOT_FOUND, request);
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+ //   @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> deleteProducto(@PathVariable Long id, HttpServletRequest request) {
+        Optional<Producto> foundProducto = productoRepository.findById(id);
+        if(foundProducto.isPresent()) {
+            productoRepository.deleteById(foundProducto.get().getId());
+            return new GlobalResponseHandler().handleResponse("Producto deleted successfully",
+                    foundProducto.get(), HttpStatus.OK, request);
+        } else {
+            return new GlobalResponseHandler().handleResponse("Producto " + id + " not found",
+                    HttpStatus.NOT_FOUND, request);
         }
-        productoRepository.deleteById(id);
-        return new GlobalResponseHandler().handleResponse("Producto eliminado correctamente", null, HttpStatus.NO_CONTENT, request);
     }
 }
+
